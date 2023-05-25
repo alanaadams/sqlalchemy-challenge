@@ -55,8 +55,17 @@ def precipitation():
     session = Session(engine)
 
     """Return a  dictionary of all precipitation data"""
-    # Query all passengers
-    results = session.query(Messenger.date, Messenger.prcp).all()
+    # Starting from the most recent data point in the database. 
+    most_recent_date = dt.date(2017, 8, 23)
+
+    # Calculate the date one year from the last date in data set.
+    query_date = most_recent_date - dt.timedelta(days=365)
+
+
+    # Perform a query to retrieve the date and precipitation scores in the last year
+    results = session.query(Messenger.date, Messenger.prcp).\
+        filter(Measurement.date >= query_date).\
+        filter(Measurement.date <= most_recent_date).all()
 
     session.close()
 
@@ -68,25 +77,62 @@ def precipitation():
         precipitation_dict["prcp"] = precipitation
         precipitation_data.append(precipitation_dict)
 
-
-    return jsonify(all_names)
+    return jsonify(precipitation_data)
 
 
 @app.route("/api/v1.0/stations")
 def stations():
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
     """Return the station data as json"""
+    # Perform a query to retrieve the stations in the data
+    stations = session.query(Station.station).all()
+    
+    session.close()
+
+    # Create a dictionary from the station data
+    station_data = []
+    for station in stations:
+        station_dict = {}
+        station_dict["station"] = station
+        station_data.append(station_dict)
 
     return jsonify(station_data)
 
 @app.route("/api/v1.0/tobs")
 def tobs():
-    """Return the temperature observation data as json"""
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
 
-    return jsonify(tobs_data)
+    """Return the temperature observation data as json"""
+    # Using the most active station id
+    # Query the last 12 months of temperature observation data for this station
+    most_active_station = "USC00519281"
+    active_tobs_data = session.query(Measurement.date, Measurement.tobs).\
+        filter(Measurement.date >= query_date).\
+        filter(Measurement.date <= most_recent_date).\
+        filter(Measurement.station == most_active_station).all()
+    
+    session.close()
+
+    # Create a dictionary from the row data and append to a list of temperature data
+    temperature_data = []
+    for date, temperature in results:
+        temperature_dict = {}
+        temperature_dict["date"] = date
+        temperature_dict["tobs"] = temperature
+        temperature_data.append(temperature_dict)
+    return jsonify(temperature_data)
 
 @app.route("/api/v1.0/<start>")
 def start():
-    """Return the <start_data> as json"""
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
+    """Return the <start_date> as json"""
+
+    session.close()
 
     return jsonify(start_data)
 
